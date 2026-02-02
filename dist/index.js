@@ -62609,24 +62609,12 @@ async function findCoverageFiles(patterns) {
 /***/ }),
 
 /***/ 8886:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getGitHubContext = getGitHubContext;
-const child_process_1 = __nccwpck_require__(5317);
-function execGit(args) {
-    try {
-        return (0, child_process_1.execSync)(`git ${args}`, {
-            encoding: 'utf-8',
-            stdio: ['pipe', 'pipe', 'pipe'],
-        }).trim();
-    }
-    catch {
-        return undefined;
-    }
-}
 function filterSensitiveInfo(url) {
     try {
         const parsed = new URL(url);
@@ -62644,33 +62632,22 @@ function getGitHubContext() {
     const runId = process.env.GITHUB_RUN_ID || '';
     const runNumber = process.env.GITHUB_RUN_NUMBER || '';
     const job = process.env.GITHUB_JOB || '';
-    // Git info - prefer DD_GIT_* env vars, then GitHub env vars, then git commands
-    let repositoryUrl = process.env.DD_GIT_REPOSITORY_URL ||
+    // Git info - prefer DD_GIT_* env vars, then GitHub env vars
+    // Only repositoryUrl and commitSha are required for coverage uploads
+    const repositoryUrl = process.env.DD_GIT_REPOSITORY_URL ||
         `https://github.com/${repository}.git`;
     const commitSha = process.env.DD_GIT_COMMIT_SHA ||
         process.env.GITHUB_SHA ||
-        execGit('rev-parse HEAD') ||
         '';
     const branch = process.env.DD_GIT_BRANCH ||
         process.env.GITHUB_HEAD_REF ||
-        process.env.GITHUB_REF_NAME ||
-        execGit('rev-parse --abbrev-ref HEAD');
+        process.env.GITHUB_REF_NAME;
     const tag = process.env.DD_GIT_TAG;
-    const commitMessage = process.env.DD_GIT_COMMIT_MESSAGE || execGit('log -1 --format=%s');
-    const authorName = process.env.DD_GIT_COMMIT_AUTHOR_NAME || execGit('log -1 --format=%an');
-    const authorEmail = process.env.DD_GIT_COMMIT_AUTHOR_EMAIL || execGit('log -1 --format=%ae');
-    const committerName = process.env.DD_GIT_COMMIT_COMMITTER_NAME || execGit('log -1 --format=%cn');
-    const committerEmail = process.env.DD_GIT_COMMIT_COMMITTER_EMAIL || execGit('log -1 --format=%ce');
     return {
         repositoryUrl: filterSensitiveInfo(repositoryUrl),
         commitSha,
         branch,
         tag,
-        commitMessage,
-        authorName,
-        authorEmail,
-        committerName,
-        committerEmail,
         pipelineId: runId,
         pipelineName: repository,
         pipelineNumber: runNumber,
@@ -62857,23 +62834,13 @@ const axios_1 = __importDefault(__nccwpck_require__(7269));
 const form_data_1 = __importDefault(__nccwpck_require__(6454));
 function buildSpanTags(ctx) {
     const tags = {};
-    // Git tags
+    // Git tags (only repositoryUrl and commitSha are required)
     tags['git.repository_url'] = ctx.repositoryUrl;
     tags['git.commit.sha'] = ctx.commitSha;
     if (ctx.branch)
         tags['git.branch'] = ctx.branch;
     if (ctx.tag)
         tags['git.tag'] = ctx.tag;
-    if (ctx.commitMessage)
-        tags['git.commit.message'] = ctx.commitMessage.slice(0, 500);
-    if (ctx.authorName)
-        tags['git.commit.author.name'] = ctx.authorName;
-    if (ctx.authorEmail)
-        tags['git.commit.author.email'] = ctx.authorEmail;
-    if (ctx.committerName)
-        tags['git.commit.committer.name'] = ctx.committerName;
-    if (ctx.committerEmail)
-        tags['git.commit.committer.email'] = ctx.committerEmail;
     // CI tags (GitHub Actions)
     tags['ci.provider.name'] = 'github';
     tags['ci.pipeline.id'] = ctx.pipelineId;

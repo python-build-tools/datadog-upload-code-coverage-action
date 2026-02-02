@@ -3,11 +3,6 @@ export interface GitHubContext {
     commitSha: string;
     branch: string | undefined;
     tag: string | undefined;
-    commitMessage: string | undefined;
-    authorName: string | undefined;
-    authorEmail: string | undefined;
-    committerName: string | undefined;
-    committerEmail: string | undefined;
     pipelineId: string;
     pipelineName: string;
     pipelineNumber: string;

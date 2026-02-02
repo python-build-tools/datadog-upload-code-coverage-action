@@ -21,16 +21,11 @@ export interface UploadOptions {
 function buildSpanTags(ctx: GitHubContext): Record<string, string> {
   const tags: Record<string, string> = {};
 
-  // Git tags
+  // Git tags (only repositoryUrl and commitSha are required)
   tags['git.repository_url'] = ctx.repositoryUrl;
   tags['git.commit.sha'] = ctx.commitSha;
   if (ctx.branch) tags['git.branch'] = ctx.branch;
   if (ctx.tag) tags['git.tag'] = ctx.tag;
-  if (ctx.commitMessage) tags['git.commit.message'] = ctx.commitMessage.slice(0, 500);
-  if (ctx.authorName) tags['git.commit.author.name'] = ctx.authorName;
-  if (ctx.authorEmail) tags['git.commit.author.email'] = ctx.authorEmail;
-  if (ctx.committerName) tags['git.commit.committer.name'] = ctx.committerName;
-  if (ctx.committerEmail) tags['git.commit.committer.email'] = ctx.committerEmail;
 
   // CI tags (GitHub Actions)
   tags['ci.provider.name'] = 'github';
