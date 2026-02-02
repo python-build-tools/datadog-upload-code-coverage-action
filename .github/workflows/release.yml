@@ -24,7 +24,8 @@ jobs:
 
           TAG="${GITHUB_REF#refs/tags/}"
           if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            MAJOR_TAG="v${TAG:1:1}"
+            MAJOR_VERSION=$(echo "$TAG" | cut -d. -f1)
+            MAJOR_TAG="$MAJOR_VERSION"
 
             echo "Creating/updating tag $MAJOR_TAG to point to $TAG"
             git tag -fa "$MAJOR_TAG" -m "Update $MAJOR_TAG tag to $TAG"
