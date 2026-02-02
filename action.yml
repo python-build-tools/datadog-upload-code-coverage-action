@@ -1,0 +1,42 @@
+name: 'Datadog Upload Code Coverage'
+description: 'Upload code coverage files to DataDog without installing datadog-ci CLI'
+author: 'Your Name'
+
+branding:
+  icon: 'upload-cloud'
+  color: 'purple'
+
+inputs:
+  api-key:
+    description: 'Datadog API key (can also be set via DD_API_KEY env variable)'
+    required: false
+  site:
+    description: 'Datadog site (e.g., datadoghq.com, datadoghq.eu, us5.datadoghq.com)'
+    required: false
+    default: 'datadoghq.com'
+  files:
+    description: 'Glob pattern or path to coverage files to upload'
+    required: true
+  service:
+    description: 'Service name for the coverage report'
+    required: false
+  env:
+    description: 'Environment name (e.g., ci, staging, production)'
+    required: false
+  flags:
+    description: 'Comma-separated list of flags for grouping and filtering (e.g., type:unit-tests,jvm-21)'
+    required: false
+  dry-run:
+    description: 'Run without uploading (for testing)'
+    required: false
+    default: 'false'
+
+outputs:
+  uploaded-files:
+    description: 'Number of files uploaded'
+  upload-time:
+    description: 'Time taken to upload in seconds'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

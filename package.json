@@ -1,0 +1,38 @@
+{
+  "name": "datadog-upload-code-coverage-action",
+  "version": "1.0.0",
+  "description": "Fast GitHub Action to upload code coverage files to DataDog",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts",
+    "all": "npm run format && npm run lint && npm run build && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/datadog-upload-code-coverage-action.git"
+  },
+  "keywords": [
+    "datadog",
+    "code-coverage",
+    "github-actions",
+    "ci",
+    "coverage"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0",
+    "@actions/glob": "^0.5.0",
+    "axios": "^1.6.7",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.16",
+    "@vercel/ncc": "^0.38.1",
+    "typescript": "^5.3.3"
+  }
+}
