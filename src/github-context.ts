@@ -37,7 +37,7 @@ export function getGitHubContext(): GitHubContext {
   // Only repositoryUrl and commitSha are required for coverage uploads
   const repositoryUrl =
     process.env.DD_GIT_REPOSITORY_URL ||
-    `https://github.com/${repository}.git`;
+    `${serverUrl}/${repository}.git`;
 
   const commitSha =
     process.env.DD_GIT_COMMIT_SHA ||
