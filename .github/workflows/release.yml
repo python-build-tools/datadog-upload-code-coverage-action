@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-tags:
+    name: Update Release Tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Update major version tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            MAJOR_TAG="v${TAG:1:1}"
+            
+            echo "Creating/updating tag $MAJOR_TAG to point to $TAG"
+            git tag -fa "$MAJOR_TAG" -m "Update $MAJOR_TAG tag to $TAG"
+            git push origin "$MAJOR_TAG" --force
+          else
+            echo "Tag $TAG does not match semantic versioning format (v*.*.*)."
+          fi
