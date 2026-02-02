@@ -71,8 +71,8 @@ function detectFormat(filePath: string, content?: string): string | null {
     }
   }
 
-  // Second pass: need to check content for XML files
-  if (!content && (filePath.endsWith('.xml') || filePath.endsWith('.json'))) {
+  // Second pass: need to check content for files that require content checking
+  if (!content && (filePath.endsWith('.xml') || filePath.endsWith('.json') || filePath.endsWith('.out'))) {
     try {
       content = fs.readFileSync(filePath, 'utf-8').slice(0, 2000); // Read first 2KB for detection
     } catch {

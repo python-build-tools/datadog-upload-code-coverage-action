@@ -1,0 +1,310 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { uploadCoverageFiles, UploadOptions } from '../uploader';
+import { GitHubContext } from '../github-context';
+import { CoverageFile } from '../file-finder';
+
+// Mock dependencies
+jest.mock('@actions/core');
+jest.mock('axios', () => ({
+  post: jest.fn(),
+  isAxiosError: jest.fn(),
+}));
+
+import axios from 'axios';
+import * as core from '@actions/core';
+
+const mockAxiosPost = axios.post as jest.MockedFunction<typeof axios.post>;
+const mockIsAxiosError = axios.isAxiosError as jest.MockedFunction<typeof axios.isAxiosError>;
+const mockCore = core as jest.Mocked<typeof core>;
+
+describe('uploader', () => {
+  const testDir = path.join(__dirname, 'uploader-fixtures');
+  let testFile: string;
+
+  const mockContext: GitHubContext = {
+    repositoryUrl: 'https://github.com/owner/repo.git',
+    commitSha: 'abc123def456',
+    branch: 'main',
+    tag: undefined,
+    pipelineId: '12345',
+    pipelineName: 'owner/repo',
+    pipelineNumber: '42',
+    pipelineUrl: 'https://github.com/owner/repo/actions/runs/12345',
+    jobName: 'test',
+    jobUrl: 'https://github.com/owner/repo/actions/runs/12345/job/test',
+    workspacePath: '/home/runner/work',
+  };
+
+  beforeAll(() => {
+    // Create test fixtures
+    if (!fs.existsSync(testDir)) {
+      fs.mkdirSync(testDir, { recursive: true });
+    }
+
+    testFile = path.join(testDir, 'coverage.xml');
+    fs.writeFileSync(
+      testFile,
+      '<?xml version="1.0"?><coverage line-rate="0.8">test</coverage>'
+    );
+  });
+
+  afterAll(() => {
+    // Cleanup
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIsAxiosError.mockReturnValue(false);
+  });
+
+  describe('uploadCoverageFiles', () => {
+    const baseOptions: UploadOptions = {
+      apiKey: 'test-api-key',
+      site: 'datadoghq.com',
+      files: [],
+      context: mockContext,
+    };
+
+    it('should upload a single file successfully', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+      expect(mockAxiosPost).toHaveBeenCalledWith(
+        'https://ci-intake.datadoghq.com/api/v2/cicovreprt',
+        expect.any(Object),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'DD-API-KEY': 'test-api-key',
+          }),
+        })
+      );
+    });
+
+    it('should include service and env in the event payload', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+        service: 'my-service',
+        env: 'production',
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+      // The form data includes the event JSON with service and env
+      const callArgs = mockAxiosPost.mock.calls[0];
+      expect(callArgs[0]).toBe('https://ci-intake.datadoghq.com/api/v2/cicovreprt');
+    });
+
+    it('should include flags in the event payload', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+        flags: ['unit-tests', 'backend'],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use custom site in URL', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        site: 'datadoghq.eu',
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledWith(
+        'https://ci-intake.datadoghq.eu/api/v2/cicovreprt',
+        expect.any(Object),
+        expect.any(Object)
+      );
+    });
+
+    it('should batch files in groups of 8', async () => {
+      const files: CoverageFile[] = Array.from({ length: 10 }, (_, i) => ({
+        path: testFile,
+        format: 'cobertura',
+      }));
+
+      const options: UploadOptions = {
+        ...baseOptions,
+        files,
+      };
+
+      mockAxiosPost.mockResolvedValue({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      // 10 files should be uploaded in 2 batches (8 + 2)
+      expect(mockAxiosPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on transient failures', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      const error = new Error('Network error');
+      mockAxiosPost
+        .mockRejectedValueOnce(error)
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3);
+      expect(mockCore.warning).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fail immediately on 400 error', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      const axiosError = {
+        response: { status: 400, data: 'Bad request' },
+        message: 'Request failed',
+        isAxiosError: true,
+      };
+      mockAxiosPost.mockRejectedValueOnce(axiosError);
+      mockIsAxiosError.mockReturnValue(true);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Upload failed with status 400'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fail immediately on 403 error', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      const axiosError = {
+        response: { status: 403, data: 'Forbidden' },
+        message: 'Request failed',
+        isAxiosError: true,
+      };
+      mockAxiosPost.mockRejectedValueOnce(axiosError);
+      mockIsAxiosError.mockReturnValue(true);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Upload failed with status 403'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fail after all retries are exhausted', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      const error = new Error('Persistent network error');
+      mockAxiosPost.mockRejectedValue(error);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Persistent network error'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3); // Default 3 retries
+    });
+
+    it('should handle files with leading dots in names', async () => {
+      const dotFile = path.join(testDir, '.coverage');
+      fs.writeFileSync(dotFile, 'coverage data');
+
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: dotFile, format: 'lcov' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+      expect(mockCore.info).toHaveBeenCalledWith(
+        expect.stringContaining('Uploading:')
+      );
+    });
+
+    it('should include all span tags from context', async () => {
+      const contextWithTag: GitHubContext = {
+        ...mockContext,
+        tag: 'v1.0.0',
+      };
+
+      const options: UploadOptions = {
+        ...baseOptions,
+        context: contextWithTag,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle empty files array', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [],
+      };
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).not.toHaveBeenCalled();
+    });
+
+    it('should log info for each file being uploaded', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [
+          { path: testFile, format: 'cobertura' },
+          { path: testFile, format: 'jacoco' },
+        ],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockCore.info).toHaveBeenCalledWith(
+        expect.stringContaining('cobertura')
+      );
+      expect(mockCore.info).toHaveBeenCalledWith(
+        expect.stringContaining('jacoco')
+      );
+    });
+  });
+});

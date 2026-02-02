@@ -1,5 +1,32 @@
+# Dependencies
 node_modules/
+
+# Build output (dist/ is checked in for GitHub Actions)
+!dist/
+
+# Test coverage
+coverage/
+
+# Logs
 *.log
+npm-debug.log*
+
+# Environment files
 .env
 .env.*
-!dist/
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test fixtures (created during tests)
+src/__tests__/fixtures/
+src/__tests__/uploader-fixtures/
