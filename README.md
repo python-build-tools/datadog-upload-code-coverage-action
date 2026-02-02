@@ -110,19 +110,6 @@ Git metadata can be overridden with:
 | `DD_GIT_COMMIT_COMMITTER_NAME` | Committer name |
 | `DD_GIT_COMMIT_COMMITTER_EMAIL` | Committer email |
 
-## CI Provider Support
-
-The action automatically detects and extracts metadata from:
-
-- GitHub Actions
-- GitLab CI
-- CircleCI
-- Jenkins
-- Azure DevOps
-- Bitbucket Pipelines
-- Travis CI
-- Buildkite
-
 ## Development
 
 ### Building

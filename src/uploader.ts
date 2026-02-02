@@ -6,47 +6,41 @@ import * as core from '@actions/core';
 import axios, { AxiosError } from 'axios';
 import FormData from 'form-data';
 import { CoverageFile } from './file-finder';
-import { GitInfo } from './git-info';
-import { CIInfo } from './ci-info';
+import { GitHubContext } from './github-context';
 
 export interface UploadOptions {
   apiKey: string;
   site: string;
   files: CoverageFile[];
-  gitInfo: GitInfo;
-  ciInfo: CIInfo;
+  context: GitHubContext;
   service?: string;
   env?: string;
   flags?: string[];
 }
 
-interface SpanTags {
-  [key: string]: string | undefined;
-}
-
-function buildSpanTags(gitInfo: GitInfo, ciInfo: CIInfo): SpanTags {
-  const tags: SpanTags = {};
+function buildSpanTags(ctx: GitHubContext): Record<string, string> {
+  const tags: Record<string, string> = {};
 
   // Git tags
-  if (gitInfo.repositoryUrl) tags['git.repository_url'] = gitInfo.repositoryUrl;
-  if (gitInfo.commitSha) tags['git.commit.sha'] = gitInfo.commitSha;
-  if (gitInfo.branch) tags['git.branch'] = gitInfo.branch;
-  if (gitInfo.tag) tags['git.tag'] = gitInfo.tag;
-  if (gitInfo.commitMessage) tags['git.commit.message'] = gitInfo.commitMessage?.slice(0, 500); // Limit message size
-  if (gitInfo.authorName) tags['git.commit.author.name'] = gitInfo.authorName;
-  if (gitInfo.authorEmail) tags['git.commit.author.email'] = gitInfo.authorEmail;
-  if (gitInfo.committerName) tags['git.commit.committer.name'] = gitInfo.committerName;
-  if (gitInfo.committerEmail) tags['git.commit.committer.email'] = gitInfo.committerEmail;
+  tags['git.repository_url'] = ctx.repositoryUrl;
+  tags['git.commit.sha'] = ctx.commitSha;
+  if (ctx.branch) tags['git.branch'] = ctx.branch;
+  if (ctx.tag) tags['git.tag'] = ctx.tag;
+  if (ctx.commitMessage) tags['git.commit.message'] = ctx.commitMessage.slice(0, 500);
+  if (ctx.authorName) tags['git.commit.author.name'] = ctx.authorName;
+  if (ctx.authorEmail) tags['git.commit.author.email'] = ctx.authorEmail;
+  if (ctx.committerName) tags['git.commit.committer.name'] = ctx.committerName;
+  if (ctx.committerEmail) tags['git.commit.committer.email'] = ctx.committerEmail;
 
-  // CI tags
-  if (ciInfo.provider) tags['ci.provider.name'] = ciInfo.provider;
-  if (ciInfo.pipelineId) tags['ci.pipeline.id'] = ciInfo.pipelineId;
-  if (ciInfo.pipelineName) tags['ci.pipeline.name'] = ciInfo.pipelineName;
-  if (ciInfo.pipelineNumber) tags['ci.pipeline.number'] = ciInfo.pipelineNumber;
-  if (ciInfo.pipelineUrl) tags['ci.pipeline.url'] = ciInfo.pipelineUrl;
-  if (ciInfo.jobName) tags['ci.job.name'] = ciInfo.jobName;
-  if (ciInfo.jobUrl) tags['ci.job.url'] = ciInfo.jobUrl;
-  if (ciInfo.workspacePath) tags['ci.workspace_path'] = ciInfo.workspacePath;
+  // CI tags (GitHub Actions)
+  tags['ci.provider.name'] = 'github';
+  tags['ci.pipeline.id'] = ctx.pipelineId;
+  tags['ci.pipeline.name'] = ctx.pipelineName;
+  tags['ci.pipeline.number'] = ctx.pipelineNumber;
+  tags['ci.pipeline.url'] = ctx.pipelineUrl;
+  tags['ci.job.name'] = ctx.jobName;
+  tags['ci.job.url'] = ctx.jobUrl;
+  tags['ci.workspace_path'] = ctx.workspacePath;
 
   return tags;
 }
@@ -58,7 +52,6 @@ function gzipFile(filePath: string): Buffer {
 
 function getReportFilename(filePath: string): string {
   let filename = path.basename(filePath);
-  // Remove leading dot as backend doesn't accept filenames starting with a dot
   if (filename.startsWith('.')) {
     filename = filename.slice(1);
   }
@@ -68,50 +61,31 @@ function getReportFilename(filePath: string): string {
 async function uploadBatch(
   options: UploadOptions,
   files: CoverageFile[],
-  spanTags: SpanTags,
+  spanTags: Record<string, string>,
   retries = 3
 ): Promise<void> {
   const intakeUrl = `https://ci-intake.${options.site}`;
   const form = new FormData();
 
-  // Build event metadata
   const event: Record<string, unknown> = {
     type: 'coverage_report',
     '_dd.hostname': os.hostname(),
+    format: files[0]?.format || 'unknown',
     ...spanTags,
   };
 
-  // Add service if provided
-  if (options.service) {
-    event['service'] = options.service;
-  }
-
-  // Add environment if provided
-  if (options.env) {
-    event['env'] = options.env;
-  }
-
-  // Add flags if provided
-  if (options.flags && options.flags.length > 0) {
-    event['report.flags'] = options.flags;
-  }
-
-  // Add format from first file (they should all be grouped by format ideally)
-  const format = files[0]?.format || 'unknown';
-  event['format'] = format;
+  if (options.service) event['service'] = options.service;
+  if (options.env) event['env'] = options.env;
+  if (options.flags?.length) event['report.flags'] = options.flags;
 
   form.append('event', JSON.stringify(event), { filename: 'event.json' });
 
-  // Add coverage files (gzipped)
   for (const file of files) {
     const gzippedContent = gzipFile(file.path);
-    const filename = `${getReportFilename(file.path)}.gz`;
-
     form.append('code_coverage_report_file', gzippedContent, {
-      filename,
+      filename: `${getReportFilename(file.path)}.gz`,
       contentType: 'application/gzip',
     });
-
     core.info(`Uploading: ${file.path} (${file.format})`);
   }
 
@@ -126,11 +100,11 @@ async function uploadBatch(
         },
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
-        timeout: 60000, // 60 second timeout
+        timeout: 60000,
       });
 
       if (response.status >= 200 && response.status < 300) {
-        return; // Success
+        return;
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -139,9 +113,10 @@ async function uploadBatch(
         const axiosError = error as AxiosError;
         const status = axiosError.response?.status;
 
-        // Don't retry on 400 or 403 errors (client errors that won't change)
         if (status === 400 || status === 403) {
-          throw new Error(`Upload failed with status ${status}: ${axiosError.response?.data || axiosError.message}`);
+          throw new Error(
+            `Upload failed with status ${status}: ${axiosError.response?.data || axiosError.message}`
+          );
         }
 
         core.warning(`Upload attempt ${attempt}/${retries} failed: ${axiosError.message}`);
@@ -150,9 +125,8 @@ async function uploadBatch(
       }
 
       if (attempt < retries) {
-        // Exponential backoff
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -161,9 +135,7 @@ async function uploadBatch(
 }
 
 export async function uploadCoverageFiles(options: UploadOptions): Promise<void> {
-  const spanTags = buildSpanTags(options.gitInfo, options.ciInfo);
-
-  // Upload files in batches of 8 (backend supports 10 attachments, but we leave room for metadata)
+  const spanTags = buildSpanTags(options.context);
   const batchSize = 8;
 
   for (let i = 0; i < options.files.length; i += batchSize) {

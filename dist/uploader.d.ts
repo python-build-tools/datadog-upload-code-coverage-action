@@ -1,12 +1,10 @@
 import { CoverageFile } from './file-finder';
-import { GitInfo } from './git-info';
-import { CIInfo } from './ci-info';
+import { GitHubContext } from './github-context';
 export interface UploadOptions {
     apiKey: string;
     site: string;
     files: CoverageFile[];
-    gitInfo: GitInfo;
-    ciInfo: CIInfo;
+    context: GitHubContext;
     service?: string;
     env?: string;
     flags?: string[];
