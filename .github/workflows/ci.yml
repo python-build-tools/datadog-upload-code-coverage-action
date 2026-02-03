@@ -35,13 +35,6 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Upload coverage
-        if: matrix.node-version == '20'
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
