@@ -63828,7 +63828,7 @@ function getGitHubContext() {
     // Git info - prefer DD_GIT_* env vars, then GitHub env vars
     // Only repositoryUrl and commitSha are required for coverage uploads
     const repositoryUrl = process.env.DD_GIT_REPOSITORY_URL ||
-        `https://github.com/${repository}.git`;
+        `${serverUrl}/${repository}.git`;
     const commitSha = process.env.DD_GIT_COMMIT_SHA ||
         process.env.GITHUB_SHA ||
         '';
