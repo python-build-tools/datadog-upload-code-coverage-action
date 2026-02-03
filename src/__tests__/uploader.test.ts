@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { uploadCoverageFiles, UploadOptions } from '../uploader';
 import { GitHubContext } from '../github-context';
 import { CoverageFile } from '../file-finder';
@@ -143,7 +142,7 @@ describe('uploader', () => {
     });
 
     it('should batch files in groups of 8', async () => {
-      const files: CoverageFile[] = Array.from({ length: 10 }, (_, i) => ({
+      const files: CoverageFile[] = Array.from({ length: 10 }, (_) => ({
         path: testFile,
         format: 'cobertura',
       }));

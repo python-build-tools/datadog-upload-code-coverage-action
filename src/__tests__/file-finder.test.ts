@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { findCoverageFiles, CoverageFile } from '../file-finder';
+import { findCoverageFiles } from '../file-finder';
 
 // Mock @actions/glob
 jest.mock('@actions/glob', () => ({

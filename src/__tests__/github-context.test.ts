@@ -1,4 +1,4 @@
-import { getGitHubContext, GitHubContext } from '../github-context';
+import { getGitHubContext } from '../github-context';
 
 describe('github-context', () => {
   const originalEnv = process.env;
