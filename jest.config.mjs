@@ -1,6 +1,6 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
-  preset: 'ts-jest',
+export default {
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
@@ -31,10 +31,11 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
+        tsconfig: {
+          module: 'ES2022',
+          moduleResolution: 'bundler',
+        },
       },
     ],
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(@actions/core|@actions/exec|@actions/http-client)/)',
-  ],
 };

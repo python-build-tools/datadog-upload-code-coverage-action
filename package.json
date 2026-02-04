@@ -1,6 +1,7 @@
 {
   "name": "datadog-upload-code-coverage-action",
   "version": "1.0.0",
+  "type": "module",
   "description": "Fast GitHub Action to upload code coverage files to DataDog",
   "main": "dist/index.js",
   "scripts": {
