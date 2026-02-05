@@ -17,7 +17,7 @@ The official `datadog-ci` CLI requires installing a large npm package with many 
 
 ```yaml
 - name: Upload coverage to Datadog
-  uses: your-org/datadog-upload-code-coverage-action@v1
+  uses: python-build-tools/datadog-upload-code-coverage-action@v1
   with:
     api-key: ${{ secrets.DD_API_KEY }}
     files: '**/coverage/*.xml'
@@ -40,7 +40,7 @@ jobs:
         run: npm test -- --coverage
 
       - name: Upload coverage to Datadog
-        uses: your-org/datadog-upload-code-coverage-action@v1
+        uses: python-build-tools/datadog-upload-code-coverage-action@v1
         with:
           api-key: ${{ secrets.DD_API_KEY }}
           site: 'datadoghq.com'
