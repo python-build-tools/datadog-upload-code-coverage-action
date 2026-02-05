@@ -27,6 +27,20 @@ function buildSpanTags(ctx: GitHubContext): Record<string, string> {
   if (ctx.branch) tags['git.branch'] = ctx.branch;
   if (ctx.tag) tags['git.tag'] = ctx.tag;
 
+  // Pull request tags
+  if (ctx.pullRequestBaseBranch) {
+    tags['git.pull_request.base_branch'] = ctx.pullRequestBaseBranch;
+  }
+  if (ctx.pullRequestHeadSha) {
+    tags['git.commit.head.sha'] = ctx.pullRequestHeadSha;
+  }
+  if (ctx.pullRequestBaseBranchHeadSha) {
+    tags['git.pull_request.base_branch_head_sha'] = ctx.pullRequestBaseBranchHeadSha;
+  }
+  if (ctx.pullRequestNumber) {
+    tags['pr.number'] = ctx.pullRequestNumber;
+  }
+
   // CI tags (GitHub Actions)
   tags['ci.provider.name'] = 'github';
   tags['ci.pipeline.id'] = ctx.pipelineId;
