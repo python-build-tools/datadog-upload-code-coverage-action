@@ -182,6 +182,31 @@ describe('uploader', () => {
       expect(mockCore.warning).toHaveBeenCalledTimes(2);
     });
 
+    it('should retry on transient axios errors and log warning with axios message', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Create an axios error with a 500 status (retryable)
+      const axiosError = {
+        response: { status: 500, data: 'Internal Server Error' },
+        message: 'Request failed with status code 500',
+        isAxiosError: true,
+      };
+      mockAxiosPost
+        .mockRejectedValueOnce(axiosError)
+        .mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
+      mockIsAxiosError.mockReturnValue(true);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(2);
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        'Upload attempt 1/3 failed: Request failed with status code 500'
+      );
+    });
+
     it('should fail immediately on 400 error', async () => {
       const options: UploadOptions = {
         ...baseOptions,
