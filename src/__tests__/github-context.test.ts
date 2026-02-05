@@ -1,5 +1,5 @@
 import { getGitHubContext } from '../github-context';
-import { context, resetContext, setContext } from '../__mocks__/@actions/github';
+import { resetContext, setContext } from '../__mocks__/@actions/github';
 
 // Mock @actions/github
 jest.mock('@actions/github');

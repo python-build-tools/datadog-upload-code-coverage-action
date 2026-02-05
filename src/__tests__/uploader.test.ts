@@ -11,7 +11,7 @@ jest.mock('axios', () => ({
   isAxiosError: jest.fn(),
 }));
 
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import * as core from '@actions/core';
 
 const mockAxiosPost = axios.post as jest.MockedFunction<typeof axios.post>;
@@ -79,7 +79,7 @@ describe('uploader', () => {
         files: [{ path: testFile, format: 'cobertura' }],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -103,7 +103,7 @@ describe('uploader', () => {
         env: 'production',
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -120,7 +120,7 @@ describe('uploader', () => {
         flags: ['unit-tests', 'backend'],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -134,7 +134,7 @@ describe('uploader', () => {
         files: [{ path: testFile, format: 'cobertura' }],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -156,7 +156,7 @@ describe('uploader', () => {
         files,
       };
 
-      mockAxiosPost.mockResolvedValue({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValue({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -174,7 +174,7 @@ describe('uploader', () => {
       mockAxiosPost
         .mockRejectedValueOnce(error)
         .mockRejectedValueOnce(error)
-        .mockResolvedValueOnce({ status: 200, data: {} } as any);
+        .mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -249,7 +249,7 @@ describe('uploader', () => {
         files: [{ path: dotFile, format: 'lcov' }],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -271,7 +271,7 @@ describe('uploader', () => {
         files: [{ path: testFile, format: 'cobertura' }],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -298,7 +298,7 @@ describe('uploader', () => {
         ],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
@@ -325,7 +325,7 @@ describe('uploader', () => {
         files: [{ path: testFile, format: 'cobertura' }],
       };
 
-      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as any);
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
 
       await uploadCoverageFiles(options);
 
