@@ -104,6 +104,38 @@ describe('file-finder', () => {
       expect(files[0].format).toBe('cobertura');
     });
 
+    it('should detect Cobertura XML files with line-rate but without cobertura keyword', async () => {
+      // Test the line-rate branch of the Cobertura content check
+      const filePath = path.join(testDir, 'coverage-linerate.xml');
+      fs.writeFileSync(
+        filePath,
+        '<?xml version="1.0"?><coverage line-rate="0.75" branch-rate="0.5">some content</coverage>'
+      );
+      mockGlob.create.mockResolvedValue(createMockGlobber([filePath]));
+
+      const files = await findCoverageFiles('**/*.xml');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].path).toBe(filePath);
+      expect(files[0].format).toBe('cobertura');
+    });
+
+    it('should detect Cobertura XML files with cobertura keyword but without line-rate', async () => {
+      // Test the cobertura keyword branch of the Cobertura content check
+      const filePath = path.join(testDir, 'coverage-cobertura-keyword.xml');
+      fs.writeFileSync(
+        filePath,
+        '<?xml version="1.0"?><coverage version="cobertura">some content</coverage>'
+      );
+      mockGlob.create.mockResolvedValue(createMockGlobber([filePath]));
+
+      const files = await findCoverageFiles('**/*.xml');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].path).toBe(filePath);
+      expect(files[0].format).toBe('cobertura');
+    });
+
     it('should find and detect Clover XML files', async () => {
       const filePath = path.join(testDir, 'clover.xml');
       mockGlob.create.mockResolvedValue(createMockGlobber([filePath]));
