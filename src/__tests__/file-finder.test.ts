@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { findCoverageFiles } from '../file-finder';
+import { findCoverageFiles, FileFinder } from '../file-finder';
 
 // Mock @actions/glob
 jest.mock('@actions/glob', () => ({
@@ -245,6 +245,27 @@ describe('file-finder', () => {
 
       expect(files).toHaveLength(1);
       expect(files[0].format).toBe('json');
+    });
+
+    it('should skip files that cannot be read for content detection', async () => {
+      // Create a file path that will trigger content detection but fail to read
+      const testPath = path.join(testDir, 'unreadable.xml');
+      // Write the file so statSync works (file exists check)
+      fs.writeFileSync(testPath, 'dummy content');
+
+      mockGlob.create.mockResolvedValue(createMockGlobber([testPath]));
+
+      const spySampleFileContent = jest.spyOn(FileFinder, 'sampleFileContent').mockImplementation(_ => {
+        throw new Error('EACCES: permission denied');
+      });
+
+      try {
+        const files = await findCoverageFiles('**/*.xml');
+        // The file should be skipped due to read error (returns null from detectCoverageFormat)
+        expect(files.some((f) => f.path === testPath)).toBe(false);
+      } finally {
+        spySampleFileContent.mockRestore();
+      }
     });
   });
 });

@@ -7,7 +7,15 @@ export interface CoverageFile {
   format: string;
 }
 
-// Coverage format detection based on file patterns and content
+export class FileFinder {
+  /**
+   * Reads file content for format detection. Extracted for testability.
+   */
+  static sampleFileContent(filePath: string): string {
+    return fs.readFileSync(filePath, 'utf-8').slice(0, 2000); // Read first 2KB for detection
+  }
+}
+
 const FORMAT_PATTERNS: { pattern: RegExp; format: string; contentCheck?: (content: string) => boolean }[] = [
   // JaCoCo - XML format with jacoco in root element
   {
@@ -74,7 +82,7 @@ function detectFormat(filePath: string, content?: string): string | null {
   // Second pass: need to check content for files that require content checking
   if (!content && (filePath.endsWith('.xml') || filePath.endsWith('.json') || filePath.endsWith('.out'))) {
     try {
-      content = fs.readFileSync(filePath, 'utf-8').slice(0, 2000); // Read first 2KB for detection
+      content = FileFinder.sampleFileContent(filePath);
     } catch {
       return null;
     }
