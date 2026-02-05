@@ -132,6 +132,19 @@ describe('github-context', () => {
       expect(result.workspacePath).toBe(process.cwd());
     });
 
+    it('should fallback to default serverUrl when context serverUrl is empty', () => {
+      setContext({
+        serverUrl: '',
+        repo: { owner: 'owner', repo: 'repo' },
+        runId: 123,
+      });
+
+      const result = getGitHubContext();
+
+      expect(result.repositoryUrl).toBe('https://github.com/owner/repo.git');
+      expect(result.pipelineUrl).toBe('https://github.com/owner/repo/actions/runs/123');
+    });
+
     it('should handle GitHub Enterprise Server URLs', () => {
       setContext({
         serverUrl: 'https://github.mycompany.com',

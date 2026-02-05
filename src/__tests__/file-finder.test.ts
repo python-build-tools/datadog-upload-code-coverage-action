@@ -220,5 +220,31 @@ describe('file-finder', () => {
         followSymbolicLinks: true,
       });
     });
+
+    it('should fallback to cobertura format for unknown XML files', async () => {
+      // Create an XML file that doesn't match any specific format
+      const unknownXmlPath = path.join(testDir, 'unknown-format.xml');
+      fs.writeFileSync(unknownXmlPath, '<?xml version="1.0"?><unknown>data</unknown>');
+
+      mockGlob.create.mockResolvedValue(createMockGlobber([unknownXmlPath]));
+
+      const files = await findCoverageFiles('**/*.xml');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].format).toBe('cobertura');
+    });
+
+    it('should fallback to json format for unknown JSON files', async () => {
+      // Create a JSON file that doesn't match any specific format pattern
+      const unknownJsonPath = path.join(testDir, 'unknown.json');
+      fs.writeFileSync(unknownJsonPath, '{"data": "test"}');
+
+      mockGlob.create.mockResolvedValue(createMockGlobber([unknownJsonPath]));
+
+      const files = await findCoverageFiles('**/*.json');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].format).toBe('json');
+    });
   });
 });
