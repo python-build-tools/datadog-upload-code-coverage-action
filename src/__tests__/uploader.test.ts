@@ -175,6 +175,7 @@ describe('uploader', () => {
         .mockRejectedValueOnce(error)
         .mockRejectedValueOnce(error)
         .mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
+      mockIsAxiosError.mockReturnValue(false);
 
       await uploadCoverageFiles(options);
 
@@ -255,8 +256,13 @@ describe('uploader', () => {
         files: [{ path: testFile, format: 'cobertura' }],
       };
 
+      // Use an actual Error instance to ensure line 115's true branch is covered
       const error = new Error('Persistent network error');
-      mockAxiosPost.mockRejectedValue(error);
+      mockAxiosPost
+        .mockRejectedValueOnce(error)
+        .mockRejectedValueOnce(error)
+        .mockRejectedValueOnce(error);
+      mockIsAxiosError.mockReturnValue(false);
 
       await expect(uploadCoverageFiles(options)).rejects.toThrow(
         'Persistent network error'
@@ -357,6 +363,179 @@ describe('uploader', () => {
       expect(mockAxiosPost).toHaveBeenCalledTimes(1);
       // The form data should contain PR tags - we verify the call was made
       // The actual tag values are included in the FormData
+    });
+
+    it('should handle context without optional branch field', async () => {
+      const noBranchContext: GitHubContext = {
+        ...mockContext,
+        branch: undefined,
+      };
+
+      const options: UploadOptions = {
+        ...baseOptions,
+        context: noBranchContext,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle non-Error objects thrown during upload', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Throw a string instead of an Error object to hit the non-Error branch
+      mockAxiosPost
+        .mockRejectedValueOnce('string error')
+        .mockRejectedValueOnce('string error')
+        .mockRejectedValueOnce('string error');
+      mockIsAxiosError.mockReturnValue(false);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow('string error');
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3);
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        'Upload attempt 1/3 failed: string error'
+      );
+    });
+
+    it('should handle null thrown during upload', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Throw null to fully test the non-Error branch
+      mockAxiosPost
+        .mockRejectedValueOnce(null)
+        .mockRejectedValueOnce(null)
+        .mockRejectedValueOnce(null);
+      mockIsAxiosError.mockReturnValue(false);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow('null');
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle axios error without response data', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Create an axios error with 400 status but no response data
+      const axiosError = {
+        response: { status: 400, data: undefined },
+        message: 'Bad Request',
+        isAxiosError: true,
+      };
+      mockAxiosPost.mockRejectedValueOnce(axiosError);
+      mockIsAxiosError.mockReturnValue(true);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Upload failed with status 400: Bad Request'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle axios error with 403 status and response data', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      const axiosError = {
+        response: { status: 403, data: 'Invalid API key' },
+        message: 'Forbidden',
+        isAxiosError: true,
+      };
+      mockAxiosPost.mockRejectedValueOnce(axiosError);
+      mockIsAxiosError.mockReturnValue(true);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Upload failed with status 403: Invalid API key'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use empty flags array without adding to event', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+        flags: [],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use unknown format when file has empty format string', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: '' }],
+      };
+
+      mockAxiosPost.mockResolvedValueOnce({ status: 200, data: {} } as AxiosResponse);
+
+      await uploadCoverageFiles(options);
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw default error when response has non-2xx status without exception', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Return non-2xx status without throwing - this makes lastError undefined
+      mockAxiosPost
+        .mockResolvedValueOnce({ status: 500, data: {} } as AxiosResponse)
+        .mockResolvedValueOnce({ status: 502, data: {} } as AxiosResponse)
+        .mockResolvedValueOnce({ status: 503, data: {} } as AxiosResponse);
+
+      await expect(uploadCoverageFiles(options)).rejects.toThrow(
+        'Upload failed after all retries'
+      );
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle Error instance thrown during upload and preserve it', async () => {
+      const options: UploadOptions = {
+        ...baseOptions,
+        files: [{ path: testFile, format: 'cobertura' }],
+      };
+
+      // Create an actual Error instance to test the true branch of instanceof Error
+      const error = new Error('Actual Error instance');
+      mockAxiosPost
+        .mockRejectedValueOnce(error)
+        .mockRejectedValueOnce(error)
+        .mockRejectedValueOnce(error);
+      mockIsAxiosError.mockReturnValue(false);
+
+      // The thrown error should be the exact same Error instance
+      try {
+        await uploadCoverageFiles(options);
+        fail('Expected an error to be thrown');
+      } catch (e) {
+        expect(e).toBe(error);
+        expect(e).toBeInstanceOf(Error);
+      }
+
+      expect(mockAxiosPost).toHaveBeenCalledTimes(3);
     });
   });
 });
