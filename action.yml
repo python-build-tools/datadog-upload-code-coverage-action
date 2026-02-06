@@ -26,10 +26,6 @@ inputs:
   flags:
     description: 'Comma-separated list of flags for grouping and filtering (e.g., type:unit-tests,jvm-21)'
     required: false
-  dry-run:
-    description: 'Run without uploading (for testing)'
-    required: false
-    default: 'false'
 
 outputs:
   uploaded-files:

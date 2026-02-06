@@ -62,7 +62,6 @@ jobs:
 | `service` | Service name for the coverage report | No | - |
 | `env` | Environment name (e.g., `ci`, `staging`) | No | - |
 | `flags` | Comma-separated flags for grouping (max 32) | No | - |
-| `dry-run` | Run without uploading (for testing) | No | `false` |
 
 *Required via input or `DD_API_KEY` / `DATADOG_API_KEY` environment variable
 

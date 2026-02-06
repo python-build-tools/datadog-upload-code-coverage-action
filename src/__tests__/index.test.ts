@@ -37,7 +37,6 @@ describe("index (run)", () => {
         service: "",
         env: "",
         flags: "",
-        "dry-run": "false",
       };
       return inputs[name] || "";
     });
@@ -221,24 +220,6 @@ describe("index (run)", () => {
 
     expect(mockCore.setFailed).toHaveBeenCalledWith(
       "Could not determine git commit SHA",
-    );
-  });
-
-  it("should run in dry-run mode without uploading", async () => {
-    mockCore.getInput.mockImplementation((name: string) => {
-      const inputs: Record<string, string> = {
-        "api-key": "test-api-key",
-        files: "**/coverage.xml",
-        "dry-run": "true",
-      };
-      return inputs[name] || "";
-    });
-
-    await runAction();
-
-    expect(mockUploadCoverageFiles).not.toHaveBeenCalled();
-    expect(mockCore.info).toHaveBeenCalledWith(
-      expect.stringContaining("[DRY-RUN]"),
     );
   });
 
