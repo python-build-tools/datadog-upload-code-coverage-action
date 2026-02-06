@@ -168,6 +168,8 @@ describe("index (run)", () => {
     );
     expect(mockCore.setOutput).toHaveBeenCalledWith("uploaded-files", 0);
     expect(mockUploadCoverageFiles).not.toHaveBeenCalled();
+    // Explicitly verify that no error is set, ensuring the workflow doesn't fail
+    expect(mockCore.setFailed).not.toHaveBeenCalled();
   });
 
   it("should fail when repository URL cannot be determined", async () => {
