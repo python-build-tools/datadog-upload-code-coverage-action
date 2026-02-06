@@ -48616,7 +48616,6 @@ async function run() {
         const service = getInput('service') || process.env.DD_SERVICE;
         const env = getInput('env') || process.env.DD_ENV;
         const flagsInput = getInput('flags');
-        const dryRun = getInput('dry-run') === 'true';
         if (!apiKey) {
             throw new Error('Datadog API key is required. Set it via api-key input, DD_API_KEY, or DATADOG_API_KEY environment variable.');
         }
@@ -48650,23 +48649,17 @@ async function run() {
             throw new Error('Could not determine git commit SHA');
         }
         // Upload files
-        if (dryRun) {
-            info('[DRY-RUN] Would upload the following files:');
-            files.forEach((f) => info(`  - ${f.path}`));
-        }
-        else {
-            await uploadCoverageFiles({
-                apiKey,
-                site,
-                files,
-                context,
-                service,
-                env,
-                flags,
-            });
-        }
+        await uploadCoverageFiles({
+            apiKey,
+            site,
+            files,
+            context,
+            service,
+            env,
+            flags,
+        });
         const elapsed = (Date.now() - startTime) / 1000;
-        info(`✅ ${dryRun ? '[DRY-RUN] ' : ''}Uploaded ${files.length} file(s) in ${elapsed.toFixed(2)} seconds`);
+        info(`✅ Uploaded ${files.length} file(s) in ${elapsed.toFixed(2)} seconds`);
         setOutput('uploaded-files', files.length);
         setOutput('upload-time', elapsed.toFixed(2));
     }
