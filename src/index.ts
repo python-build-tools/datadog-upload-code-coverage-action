@@ -16,7 +16,6 @@ async function run(): Promise<void> {
     const service = core.getInput('service') || process.env.DD_SERVICE;
     const env = core.getInput('env') || process.env.DD_ENV;
     const flagsInput = core.getInput('flags');
-    const dryRun = core.getInput('dry-run') === 'true';
 
     if (!apiKey) {
       throw new Error(
@@ -63,25 +62,18 @@ async function run(): Promise<void> {
     }
 
     // Upload files
-    if (dryRun) {
-      core.info('[DRY-RUN] Would upload the following files:');
-      files.forEach((f) => core.info(`  - ${f.path}`));
-    } else {
-      await uploadCoverageFiles({
-        apiKey,
-        site,
-        files,
-        context,
-        service,
-        env,
-        flags,
-      });
-    }
+    await uploadCoverageFiles({
+      apiKey,
+      site,
+      files,
+      context,
+      service,
+      env,
+      flags,
+    });
 
     const elapsed = (Date.now() - startTime) / 1000;
-    core.info(
-      `✅ ${dryRun ? '[DRY-RUN] ' : ''}Uploaded ${files.length} file(s) in ${elapsed.toFixed(2)} seconds`
-    );
+    core.info(`✅ Uploaded ${files.length} file(s) in ${elapsed.toFixed(2)} seconds`);
 
     core.setOutput('uploaded-files', files.length);
     core.setOutput('upload-time', elapsed.toFixed(2));
